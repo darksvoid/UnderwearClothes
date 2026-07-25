@@ -1,0 +1,11 @@
+{
+  "Group": "Misc",
+  "FriendlyName": "Mobile REST API",
+  "SystemName": "Api.Mobile",
+  "Version": "1.00",
+  "SupportedVersions": [ "4.90" ],
+  "Author": "darksvoid",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.Api.Mobile.dll",
+  "Description": "Private REST API for the mobile client application (OpenAPI / Swagger)"
+}
