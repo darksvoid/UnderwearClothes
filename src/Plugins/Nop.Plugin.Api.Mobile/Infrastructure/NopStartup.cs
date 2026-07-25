@@ -20,6 +20,8 @@ public class NopStartup : INopStartup
         services.AddScoped<ApiExceptionFilter>();
 
         services.AddScoped<ICatalogModelFactory, CatalogModelFactory>();
+        services.AddScoped<ICustomerModelFactory, CustomerModelFactory>();
+        services.AddScoped<IOrderModelFactory, OrderModelFactory>();
 
         services.AddMemoryCache();
         services.TryAddSingleton(TimeProvider.System);
