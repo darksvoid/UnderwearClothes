@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
+using Nop.Core.Domain.Catalog;
 using Nop.Plugin.Api.Mobile.Factories;
 using Nop.Plugin.Api.Mobile.Models;
 using Nop.Plugin.Api.Mobile.Models.Catalog;
@@ -45,10 +46,17 @@ public class ProductsController : BaseApiController
         [FromQuery] string keywords = null,
         [FromQuery] int categoryId = 0,
         [FromQuery] int manufacturerId = 0,
+        [FromQuery] decimal? priceMin = null,
+        [FromQuery] decimal? priceMax = null,
+        [FromQuery] int orderBy = 0,
         [FromQuery] int pageIndex = 0,
         [FromQuery] int pageSize = ApiMobileDefaults.DefaultPageSize)
     {
         var store = await _storeContext.GetCurrentStoreAsync();
+
+        var sorting = Enum.IsDefined(typeof(ProductSortingEnum), orderBy)
+            ? (ProductSortingEnum)orderBy
+            : ProductSortingEnum.Position;
 
         var products = await _productService.SearchProductsAsync(
             pageIndex: NormalizePageIndex(pageIndex),
@@ -56,7 +64,10 @@ public class ProductsController : BaseApiController
             categoryIds: categoryId > 0 ? new List<int> { categoryId } : null,
             manufacturerIds: manufacturerId > 0 ? new List<int> { manufacturerId } : null,
             storeId: store.Id,
+            priceMin: priceMin,
+            priceMax: priceMax,
             keywords: keywords,
+            orderBy: sorting,
             visibleIndividuallyOnly: true);
 
         return Success(await _catalogModelFactory.PrepareProductPagedResponseAsync(products));

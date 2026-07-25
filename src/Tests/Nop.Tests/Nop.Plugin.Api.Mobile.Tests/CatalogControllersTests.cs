@@ -6,7 +6,9 @@ using Nop.Plugin.Api.Mobile.Controllers;
 using Nop.Plugin.Api.Mobile.Factories;
 using Nop.Plugin.Api.Mobile.Models;
 using Nop.Plugin.Api.Mobile.Models.Catalog;
+using Nop.Core.Domain.Catalog;
 using Nop.Services.Catalog;
+using Nop.Services.Customers;
 using Nop.Services.Media;
 using Nop.Services.Seo;
 using Nop.Tests.Nop.Services.Tests;
@@ -47,7 +49,11 @@ public class CatalogControllersTests : ServiceTest
             GetService<IPictureService>(),
             GetService<IPriceCalculationService>(),
             GetService<IPriceFormatter>(),
-            GetService<IUrlRecordService>());
+            GetService<IUrlRecordService>(),
+            _productService,
+            GetService<IProductReviewService>(),
+            GetService<ISpecificationAttributeService>(),
+            GetService<ICustomerService>());
 
         _categoriesController = new CategoriesController(_categoryService, _productService, _storeContext, _catalogModelFactory);
         _manufacturersController = new ManufacturersController(_manufacturerService, _productService, _storeContext, _catalogModelFactory);
@@ -225,6 +231,66 @@ public class CatalogControllersTests : ServiceTest
         var result = await _productsController.Get(int.MaxValue);
 
         result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Test]
+    public async Task SearchSortedByPriceAscendingShouldOrderResults()
+    {
+        var result = await _productsController.Search(orderBy: (int)ProductSortingEnum.PriceAsc, pageSize: 50);
+
+        var data = ExtractSuccess<PagedResponse<ProductOverviewModel>>(result);
+        data.Items.Select(item => item.Price).Should().BeInAscendingOrder();
+    }
+
+    [Test]
+    public async Task SearchWithMaxPriceShouldNotExceedUnfilteredCount()
+    {
+        var unfiltered = ExtractSuccess<PagedResponse<ProductOverviewModel>>(await _productsController.Search(pageSize: 1));
+        var filtered = ExtractSuccess<PagedResponse<ProductOverviewModel>>(await _productsController.Search(priceMax: 10m, pageSize: 1));
+
+        filtered.TotalCount.Should().BeLessThanOrEqualTo(unfiltered.TotalCount);
+    }
+
+    [Test]
+    public async Task ProductDetailsShouldExposeReviews()
+    {
+        var reviewService = GetService<IProductReviewService>();
+        var anyReview = (await reviewService.GetAllProductReviewsAsync(approved: true, pageSize: 1)).FirstOrDefault();
+        if (anyReview is null)
+            Assert.Ignore("No sample product reviews were seeded.");
+
+        var product = await _productService.GetProductByIdAsync(anyReview.ProductId);
+        var details = await _catalogModelFactory.PrepareProductDetailsModelAsync(product);
+
+        details.Reviews.Should().Contain(review => review.Id == anyReview.Id);
+        details.TotalReviews.Should().BeGreaterThan(0);
+    }
+
+    [Test]
+    public async Task ProductDetailsShouldExposeSpecifications()
+    {
+        var store = await _storeContext.GetCurrentStoreAsync();
+        var specificationAttributeService = GetService<ISpecificationAttributeService>();
+        var products = await _productService.SearchProductsAsync(pageSize: 100, storeId: store.Id, visibleIndividuallyOnly: true);
+
+        Product productWithSpecs = null;
+        foreach (var product in products)
+        {
+            var specs = await specificationAttributeService.GetProductSpecificationAttributesAsync(product.Id, showOnProductPage: true);
+            if (specs.Any())
+            {
+                productWithSpecs = product;
+                break;
+            }
+        }
+
+        if (productWithSpecs is null)
+            Assert.Ignore("No sample product with specifications was found.");
+
+        var details = await _catalogModelFactory.PrepareProductDetailsModelAsync(productWithSpecs);
+
+        details.Specifications.Should().NotBeEmpty();
+        details.Specifications.Should().OnlyContain(spec => !string.IsNullOrEmpty(spec.Name));
     }
 
     #endregion

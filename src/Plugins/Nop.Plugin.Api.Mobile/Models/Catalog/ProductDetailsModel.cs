@@ -27,4 +27,14 @@ public class ProductDetailsModel
     public bool MarkAsNew { get; set; }
 
     public IList<string> PictureUrls { get; set; } = new List<string>();
+
+    public double AverageRating { get; set; }
+
+    public int TotalReviews { get; set; }
+
+    public IList<ProductSpecificationModel> Specifications { get; set; } = new List<ProductSpecificationModel>();
+
+    public IList<ProductReviewModel> Reviews { get; set; } = new List<ProductReviewModel>();
+
+    public IList<ProductOverviewModel> RelatedProducts { get; set; } = new List<ProductOverviewModel>();
 }

@@ -3,6 +3,7 @@ using Nop.Core.Domain.Catalog;
 using Nop.Plugin.Api.Mobile.Models;
 using Nop.Plugin.Api.Mobile.Models.Catalog;
 using Nop.Services.Catalog;
+using Nop.Services.Customers;
 using Nop.Services.Media;
 using Nop.Services.Seo;
 
@@ -18,6 +19,10 @@ public class CatalogModelFactory : ICatalogModelFactory
     protected readonly IPriceCalculationService _priceCalculationService;
     protected readonly IPriceFormatter _priceFormatter;
     protected readonly IUrlRecordService _urlRecordService;
+    protected readonly IProductService _productService;
+    protected readonly IProductReviewService _productReviewService;
+    protected readonly ISpecificationAttributeService _specificationAttributeService;
+    protected readonly ICustomerService _customerService;
 
     #endregion
 
@@ -28,7 +33,11 @@ public class CatalogModelFactory : ICatalogModelFactory
         IPictureService pictureService,
         IPriceCalculationService priceCalculationService,
         IPriceFormatter priceFormatter,
-        IUrlRecordService urlRecordService)
+        IUrlRecordService urlRecordService,
+        IProductService productService,
+        IProductReviewService productReviewService,
+        ISpecificationAttributeService specificationAttributeService,
+        ICustomerService customerService)
     {
         _workContext = workContext;
         _storeContext = storeContext;
@@ -36,6 +45,10 @@ public class CatalogModelFactory : ICatalogModelFactory
         _priceCalculationService = priceCalculationService;
         _priceFormatter = priceFormatter;
         _urlRecordService = urlRecordService;
+        _productService = productService;
+        _productReviewService = productReviewService;
+        _specificationAttributeService = specificationAttributeService;
+        _customerService = customerService;
     }
 
     #endregion
@@ -141,8 +154,79 @@ public class CatalogModelFactory : ICatalogModelFactory
                 ? await _priceFormatter.FormatPriceAsync(product.OldPrice)
                 : null,
             MarkAsNew = product.MarkAsNew,
-            PictureUrls = pictureUrls
+            PictureUrls = pictureUrls,
+            AverageRating = product.ApprovedTotalReviews > 0
+                ? (double)product.ApprovedRatingSum / product.ApprovedTotalReviews
+                : 0,
+            TotalReviews = product.ApprovedTotalReviews,
+            Specifications = await PrepareSpecificationsAsync(product),
+            Reviews = await PrepareReviewsAsync(product),
+            RelatedProducts = await PrepareRelatedProductsAsync(product)
         };
+    }
+
+    protected virtual async Task<IList<ProductSpecificationModel>> PrepareSpecificationsAsync(Product product)
+    {
+        var models = new List<ProductSpecificationModel>();
+
+        var mappings = await _specificationAttributeService.GetProductSpecificationAttributesAsync(
+            product.Id, showOnProductPage: true);
+
+        foreach (var mapping in mappings)
+        {
+            var option = await _specificationAttributeService.GetSpecificationAttributeOptionByIdAsync(mapping.SpecificationAttributeOptionId);
+            if (option is null)
+                continue;
+
+            var attribute = await _specificationAttributeService.GetSpecificationAttributeByIdAsync(option.SpecificationAttributeId);
+
+            models.Add(new ProductSpecificationModel
+            {
+                Name = attribute?.Name,
+                Value = string.IsNullOrEmpty(mapping.CustomValue) ? option.Name : mapping.CustomValue
+            });
+        }
+
+        return models;
+    }
+
+    protected virtual async Task<IList<ProductReviewModel>> PrepareReviewsAsync(Product product)
+    {
+        var models = new List<ProductReviewModel>();
+
+        var reviews = await _productReviewService.GetAllProductReviewsAsync(productId: product.Id, approved: true);
+        foreach (var review in reviews)
+        {
+            var customer = await _customerService.GetCustomerByIdAsync(review.CustomerId);
+
+            models.Add(new ProductReviewModel
+            {
+                Id = review.Id,
+                Title = review.Title,
+                ReviewText = review.ReviewText,
+                Rating = review.Rating,
+                ReviewerName = customer is null ? null : await _customerService.FormatUsernameAsync(customer),
+                CreatedOnUtc = review.CreatedOnUtc
+            });
+        }
+
+        return models;
+    }
+
+    protected virtual async Task<IList<ProductOverviewModel>> PrepareRelatedProductsAsync(Product product)
+    {
+        var models = new List<ProductOverviewModel>();
+
+        foreach (var relatedProduct in await _productService.GetRelatedProductsByProductId1Async(product.Id))
+        {
+            var related = await _productService.GetProductByIdAsync(relatedProduct.ProductId2);
+            if (related is null || related.Deleted || !related.Published)
+                continue;
+
+            models.Add(await PrepareProductOverviewModelAsync(related));
+        }
+
+        return models;
     }
 
     public async Task<IList<ProductOverviewModel>> PrepareProductOverviewModelsAsync(IEnumerable<Product> products)
