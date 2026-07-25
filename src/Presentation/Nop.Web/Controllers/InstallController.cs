@@ -132,7 +132,7 @@ public partial class InstallController : Controller
 
         var model = new InstallModel
         {
-            AdminEmail = "admin@yourStore.com",
+            AdminEmail = "admin@admin.com",
             InstallSampleData = false,
             SubscribeNewsletters = true,
             InstallRegionalResources = _appSettings.Get<InstallationConfig>().InstallRegionalResources,
