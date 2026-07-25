@@ -43,14 +43,39 @@ public class CartModelFactory : ICartModelFactory
         var store = await _storeContext.GetCurrentStoreAsync();
         var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
 
-        var items = new List<CartItemModel>();
-        foreach (var shoppingCartItem in cart)
+        var (_, _, _, subTotalWithDiscount, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, true);
+
+        return new CartModel
+        {
+            Items = await PrepareItemsAsync(cart),
+            TotalItems = cart.Sum(item => item.Quantity),
+            SubTotal = subTotalWithDiscount,
+            SubTotalFormatted = await _priceFormatter.FormatPriceAsync(subTotalWithDiscount)
+        };
+    }
+
+    public async Task<WishlistModel> PrepareWishlistModelAsync(Customer customer)
+    {
+        var store = await _storeContext.GetCurrentStoreAsync();
+        var wishlist = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.Wishlist, store.Id);
+
+        return new WishlistModel
+        {
+            Items = await PrepareItemsAsync(wishlist),
+            TotalItems = wishlist.Sum(item => item.Quantity)
+        };
+    }
+
+    protected virtual async Task<IList<CartItemModel>> PrepareItemsAsync(IList<ShoppingCartItem> shoppingCartItems)
+    {
+        var models = new List<CartItemModel>();
+        foreach (var shoppingCartItem in shoppingCartItems)
         {
             var product = await _productService.GetProductByIdAsync(shoppingCartItem.ProductId);
             var (unitPrice, _, _) = await _shoppingCartService.GetUnitPriceAsync(shoppingCartItem, true);
             var (subTotal, _, _, _) = await _shoppingCartService.GetSubTotalAsync(shoppingCartItem, true);
 
-            items.Add(new CartItemModel
+            models.Add(new CartItemModel
             {
                 Id = shoppingCartItem.Id,
                 ProductId = shoppingCartItem.ProductId,
@@ -63,15 +88,7 @@ public class CartModelFactory : ICartModelFactory
             });
         }
 
-        var (_, _, _, subTotalWithDiscount, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, true);
-
-        return new CartModel
-        {
-            Items = items,
-            TotalItems = cart.Sum(item => item.Quantity),
-            SubTotal = subTotalWithDiscount,
-            SubTotalFormatted = await _priceFormatter.FormatPriceAsync(subTotalWithDiscount)
-        };
+        return models;
     }
 
     #endregion

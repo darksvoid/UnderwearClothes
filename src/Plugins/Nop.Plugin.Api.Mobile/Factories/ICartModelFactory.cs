@@ -6,4 +6,6 @@ namespace Nop.Plugin.Api.Mobile.Factories;
 public interface ICartModelFactory
 {
     Task<CartModel> PrepareCartModelAsync(Customer customer);
+
+    Task<WishlistModel> PrepareWishlistModelAsync(Customer customer);
 }
