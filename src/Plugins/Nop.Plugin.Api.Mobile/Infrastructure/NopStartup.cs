@@ -1,10 +1,14 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Nop.Core.Infrastructure;
 using Nop.Plugin.Api.Mobile.Models;
+using Nop.Plugin.Api.Mobile.Services.Security;
 
 namespace Nop.Plugin.Api.Mobile.Infrastructure;
 
@@ -20,6 +24,19 @@ public class NopStartup : INopStartup
     {
         //uniform exception handling for API controllers
         services.AddScoped<ApiExceptionFilter>();
+
+        //authentication infrastructure
+        services.AddMemoryCache();
+        services.TryAddSingleton(TimeProvider.System);
+
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IBlacklistService, BlacklistService>();
+        services.AddScoped<IApiAuthenticationService, ApiAuthenticationService>();
+        services.AddScoped<SetWorkContextCustomerFilter>();
+
+        //JWT bearer scheme; the signing key/options are configured lazily from plugin settings
+        services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+        services.AddAuthentication().AddJwtBearer(ApiMobileDefaults.AuthenticationScheme, _ => { });
 
         //return the uniform error envelope for model validation failures too
         services.Configure<ApiBehaviorOptions>(options =>
@@ -57,6 +74,27 @@ public class NopStartup : INopStartup
                 "Nop.Plugin.Api.Mobile.xml");
             if (File.Exists(xmlPath))
                 options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+
+            //JWT bearer authentication in the Swagger UI ("Authorize" button)
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Enter the JWT access token obtained from /api/v1/auth/token."
+            });
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                    },
+                    Array.Empty<string>()
+                }
+            });
         });
     }
 

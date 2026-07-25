@@ -30,4 +30,14 @@ public static class ApiMobileDefaults
     /// Gets the API title shown in the Swagger document
     /// </summary>
     public const string ApiTitle = "nopCommerce Mobile API";
+
+    /// <summary>
+    /// Gets the name of the JWT bearer authentication scheme used by the API
+    /// </summary>
+    public const string AuthenticationScheme = "MobileApiBearer";
+
+    /// <summary>
+    /// Gets the cache key prefix for revoked (blacklisted) tokens
+    /// </summary>
+    public const string BlacklistCacheKeyPrefix = "nop.api.mobile.blacklist:";
 }

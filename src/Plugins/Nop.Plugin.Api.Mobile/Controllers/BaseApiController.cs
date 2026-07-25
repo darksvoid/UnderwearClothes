@@ -13,6 +13,7 @@ namespace Nop.Plugin.Api.Mobile.Controllers;
 [Produces("application/json")]
 [Route(ApiMobileDefaults.ApiRoutePrefix + "/[controller]")]
 [ServiceFilter(typeof(ApiExceptionFilter))]
+[ServiceFilter(typeof(SetWorkContextCustomerFilter))]
 [ProducesResponseType(typeof(ApiError), StatusCodes.Status500InternalServerError)]
 public abstract class BaseApiController : ControllerBase
 {
