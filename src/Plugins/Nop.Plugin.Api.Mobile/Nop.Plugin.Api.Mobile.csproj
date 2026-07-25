@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
     <Copyright>Copyright © darksvoid</Copyright>
     <Company>darksvoid</Company>
     <Authors>darksvoid</Authors>

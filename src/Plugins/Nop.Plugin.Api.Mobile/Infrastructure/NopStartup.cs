@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Nop.Core.Infrastructure;
+using Nop.Plugin.Api.Mobile.Factories;
 using Nop.Plugin.Api.Mobile.Models;
 using Nop.Plugin.Api.Mobile.Services.Security;
 
@@ -17,6 +18,8 @@ public class NopStartup : INopStartup
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ApiExceptionFilter>();
+
+        services.AddScoped<ICatalogModelFactory, CatalogModelFactory>();
 
         services.AddMemoryCache();
         services.TryAddSingleton(TimeProvider.System);

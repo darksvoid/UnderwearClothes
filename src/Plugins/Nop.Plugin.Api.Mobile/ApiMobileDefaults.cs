@@ -15,4 +15,8 @@ public static class ApiMobileDefaults
     public const string AuthenticationScheme = "MobileApiBearer";
 
     public const string BlacklistCacheKeyPrefix = "nop.api.mobile.blacklist:";
+
+    public const int DefaultPageSize = 20;
+
+    public const int MaxPageSize = 100;
 }

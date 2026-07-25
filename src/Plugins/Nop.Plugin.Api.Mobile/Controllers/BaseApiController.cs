@@ -24,4 +24,25 @@ public abstract class BaseApiController : ControllerBase
     {
         return Ok(ApiResponse<T>.Ok(data));
     }
+
+    /// <summary>
+    /// Returns a 404 response wrapped in the uniform error envelope
+    /// </summary>
+    protected IActionResult NotFoundError(string message)
+    {
+        return NotFound(ApiResponse.Fail("not_found", message));
+    }
+
+    protected static int NormalizePageIndex(int pageIndex)
+    {
+        return pageIndex < 0 ? 0 : pageIndex;
+    }
+
+    protected static int NormalizePageSize(int pageSize)
+    {
+        if (pageSize <= 0)
+            return ApiMobileDefaults.DefaultPageSize;
+
+        return Math.Min(pageSize, ApiMobileDefaults.MaxPageSize);
+    }
 }
