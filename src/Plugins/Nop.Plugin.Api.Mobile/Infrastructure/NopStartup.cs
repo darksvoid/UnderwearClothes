@@ -23,6 +23,7 @@ public class NopStartup : INopStartup
         services.AddScoped<ICustomerModelFactory, CustomerModelFactory>();
         services.AddScoped<IOrderModelFactory, OrderModelFactory>();
         services.AddScoped<ICartModelFactory, CartModelFactory>();
+        services.AddScoped<ICheckoutModelFactory, CheckoutModelFactory>();
 
         services.AddMemoryCache();
         services.TryAddSingleton(TimeProvider.System);
