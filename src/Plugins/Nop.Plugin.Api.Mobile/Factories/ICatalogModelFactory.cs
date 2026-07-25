@@ -9,6 +9,8 @@ public interface ICatalogModelFactory
 {
     Task<CategoryModel> PrepareCategoryModelAsync(Category category);
 
+    Task<IList<CategoryTreeModel>> PrepareCategoryTreeAsync(IList<Category> categories);
+
     Task<ManufacturerModel> PrepareManufacturerModelAsync(Manufacturer manufacturer);
 
     Task<ProductOverviewModel> PrepareProductOverviewModelAsync(Product product);

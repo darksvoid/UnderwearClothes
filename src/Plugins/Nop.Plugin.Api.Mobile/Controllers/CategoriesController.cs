@@ -57,6 +57,19 @@ public class CategoriesController : BaseApiController
     }
 
     /// <summary>
+    /// Returns the categories of the store as a nested tree.
+    /// </summary>
+    [HttpGet("tree")]
+    [ProducesResponseType(typeof(ApiResponse<IList<CategoryTreeModel>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTree()
+    {
+        var store = await _storeContext.GetCurrentStoreAsync();
+        var categories = await _categoryService.GetAllCategoriesAsync(store.Id);
+
+        return Success(await _catalogModelFactory.PrepareCategoryTreeAsync(categories));
+    }
+
+    /// <summary>
     /// Returns a single category by identifier.
     /// </summary>
     /// <response code="404">The category was not found.</response>

@@ -56,6 +56,32 @@ public class CatalogModelFactory : ICatalogModelFactory
         };
     }
 
+    public async Task<IList<CategoryTreeModel>> PrepareCategoryTreeAsync(IList<Category> categories)
+    {
+        var categoriesByParent = categories.ToLookup(category => category.ParentCategoryId);
+        return await BuildCategoryNodesAsync(0, categoriesByParent);
+    }
+
+    protected virtual async Task<IList<CategoryTreeModel>> BuildCategoryNodesAsync(int parentCategoryId, ILookup<int, Category> categoriesByParent)
+    {
+        var nodes = new List<CategoryTreeModel>();
+        foreach (var category in categoriesByParent[parentCategoryId].OrderBy(category => category.DisplayOrder))
+        {
+            nodes.Add(new CategoryTreeModel
+            {
+                Id = category.Id,
+                ParentCategoryId = category.ParentCategoryId,
+                Name = category.Name,
+                SeName = await _urlRecordService.GetSeNameAsync(category),
+                PictureUrl = await _pictureService.GetPictureUrlAsync(category.PictureId),
+                DisplayOrder = category.DisplayOrder,
+                Children = await BuildCategoryNodesAsync(category.Id, categoriesByParent)
+            });
+        }
+
+        return nodes;
+    }
+
     public async Task<ManufacturerModel> PrepareManufacturerModelAsync(Manufacturer manufacturer)
     {
         return new ManufacturerModel

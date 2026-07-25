@@ -107,6 +107,34 @@ public class CatalogControllersTests : ServiceTest
     }
 
     [Test]
+    public async Task GetCategoryTreeShouldBeRootedAndComplete()
+    {
+        var store = await _storeContext.GetCurrentStoreAsync();
+        var flatCount = (await _categoryService.GetAllCategoriesAsync(store.Id)).Count;
+
+        var result = await _categoriesController.GetTree();
+
+        var tree = ExtractSuccess<IList<CategoryTreeModel>>(result);
+        tree.Should().NotBeEmpty();
+        tree.Should().OnlyContain(node => node.ParentCategoryId == 0);
+        CountNodes(tree).Should().Be(flatCount);
+    }
+
+    [Test]
+    public async Task GetCategoryTreeShouldContainNestedChildren()
+    {
+        var result = await _categoriesController.GetTree();
+
+        var tree = ExtractSuccess<IList<CategoryTreeModel>>(result);
+        tree.Any(node => node.Children.Any()).Should().BeTrue();
+    }
+
+    private static int CountNodes(IEnumerable<CategoryTreeModel> nodes)
+    {
+        return nodes.Sum(node => 1 + CountNodes(node.Children));
+    }
+
+    [Test]
     public async Task GetCategoryProductsShouldReturnPagedResponse()
     {
         var store = await _storeContext.GetCurrentStoreAsync();
