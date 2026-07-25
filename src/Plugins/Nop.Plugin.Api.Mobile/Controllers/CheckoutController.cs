@@ -6,6 +6,8 @@ using Nop.Core.Domain.Common;
 using Nop.Plugin.Api.Mobile.Factories;
 using Nop.Plugin.Api.Mobile.Models;
 using Nop.Plugin.Api.Mobile.Models.Checkout;
+using Nop.Plugin.Api.Mobile.Models.Orders;
+using Nop.Plugin.Api.Mobile.Services.Checkout;
 using Nop.Services.Customers;
 
 namespace Nop.Plugin.Api.Mobile.Controllers;
@@ -22,6 +24,8 @@ public class CheckoutController : BaseApiController
     protected readonly IWorkContext _workContext;
     protected readonly ICustomerService _customerService;
     protected readonly ICheckoutModelFactory _checkoutModelFactory;
+    protected readonly IOrderModelFactory _orderModelFactory;
+    protected readonly IOrderPlacementService _orderPlacementService;
 
     #endregion
 
@@ -29,11 +33,15 @@ public class CheckoutController : BaseApiController
 
     public CheckoutController(IWorkContext workContext,
         ICustomerService customerService,
-        ICheckoutModelFactory checkoutModelFactory)
+        ICheckoutModelFactory checkoutModelFactory,
+        IOrderModelFactory orderModelFactory,
+        IOrderPlacementService orderPlacementService)
     {
         _workContext = workContext;
         _customerService = customerService;
         _checkoutModelFactory = checkoutModelFactory;
+        _orderModelFactory = orderModelFactory;
+        _orderPlacementService = orderPlacementService;
     }
 
     #endregion
@@ -61,6 +69,42 @@ public class CheckoutController : BaseApiController
         }
 
         return Success(await _checkoutModelFactory.PrepareCheckoutDataAsync(customer, shippingAddress));
+    }
+
+    /// <summary>
+    /// Places an order for the authenticated customer using an offline payment method.
+    /// </summary>
+    /// <response code="400">The order could not be placed (validation errors).</response>
+    /// <response code="404">A referenced address was not found for this customer.</response>
+    [HttpPost("order")]
+    [ProducesResponseType(typeof(ApiResponse<OrderDetailsModel>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request)
+    {
+        var customer = await _workContext.GetCurrentCustomerAsync();
+        var addresses = await _customerService.GetAddressesByCustomerIdAsync(customer.Id);
+
+        var billingAddress = addresses.FirstOrDefault(address => address.Id == request.BillingAddressId);
+        if (billingAddress is null)
+            return NotFoundError("Billing address not found.");
+
+        Address shippingAddress = null;
+        if (request.ShippingAddressId.HasValue)
+        {
+            shippingAddress = addresses.FirstOrDefault(address => address.Id == request.ShippingAddressId.Value);
+            if (shippingAddress is null)
+                return NotFoundError("Shipping address not found.");
+        }
+
+        var (order, errors) = await _orderPlacementService.PlaceOrderAsync(customer, billingAddress, shippingAddress, request);
+        if (order is null)
+        {
+            var details = new Dictionary<string, string[]> { ["errors"] = errors.ToArray() };
+            return BadRequest(ApiResponse.Fail("order_error", string.Join("; ", errors), details));
+        }
+
+        return Success(await _orderModelFactory.PrepareOrderDetailsModelAsync(order));
     }
 
     #endregion
