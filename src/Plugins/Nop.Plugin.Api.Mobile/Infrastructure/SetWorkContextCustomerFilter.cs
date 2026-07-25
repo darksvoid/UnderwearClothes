@@ -6,11 +6,6 @@ using Nop.Services.Customers;
 
 namespace Nop.Plugin.Api.Mobile.Infrastructure;
 
-/// <summary>
-/// When a request is authenticated via a mobile API token, resolves the corresponding customer
-/// and sets it as the current customer on the work context, so downstream services and factories
-/// (orders, cart, prices) operate on behalf of the authenticated customer.
-/// </summary>
 public class SetWorkContextCustomerFilter : IAsyncActionFilter
 {
     #region Fields

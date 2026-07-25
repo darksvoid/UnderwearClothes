@@ -28,23 +28,11 @@ public class StatusController : BaseApiController
     }
 }
 
-/// <summary>
-/// Represents the API status payload
-/// </summary>
 public class StatusModel
 {
-    /// <summary>
-    /// Gets or sets the API name
-    /// </summary>
     public string Name { get; set; }
 
-    /// <summary>
-    /// Gets or sets the API version
-    /// </summary>
     public string ApiVersion { get; set; }
 
-    /// <summary>
-    /// Gets or sets the current server time (UTC)
-    /// </summary>
     public DateTime ServerTimeUtc { get; set; }
 }

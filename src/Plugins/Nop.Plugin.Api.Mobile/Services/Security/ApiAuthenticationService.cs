@@ -4,10 +4,6 @@ using Nop.Services.Customers;
 
 namespace Nop.Plugin.Api.Mobile.Services.Security;
 
-/// <summary>
-/// Reuses the nopCommerce customer registration/validation logic to authenticate a customer,
-/// then issues a JWT access token. Logout revokes the presented token via the blacklist.
-/// </summary>
 public class ApiAuthenticationService : IApiAuthenticationService
 {
     #region Fields

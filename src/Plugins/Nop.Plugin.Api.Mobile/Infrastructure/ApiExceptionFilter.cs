@@ -6,10 +6,6 @@ using Nop.Plugin.Api.Mobile.Models;
 
 namespace Nop.Plugin.Api.Mobile.Infrastructure;
 
-/// <summary>
-/// Converts unhandled exceptions thrown by API controllers into the uniform
-/// <see cref="ApiResponse{T}"/> error envelope with an appropriate status code.
-/// </summary>
 public class ApiExceptionFilter : IAsyncExceptionFilter
 {
     #region Fields
@@ -44,7 +40,6 @@ public class ApiExceptionFilter : IAsyncExceptionFilter
         if (statusCode == StatusCodes.Status500InternalServerError)
             _logger.LogError(exception, "Mobile API unhandled exception");
 
-        // Do not leak internal details for 500s
         var message = statusCode == StatusCodes.Status500InternalServerError
             ? "An unexpected error occurred."
             : exception.Message;

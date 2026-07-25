@@ -7,9 +7,6 @@ using Nop.Plugin.Api.Mobile.Domain;
 
 namespace Nop.Plugin.Api.Mobile.Services.Security;
 
-/// <summary>
-/// Generates HMAC-SHA256 signed JWT access tokens using the plugin settings.
-/// </summary>
 public class TokenService : ITokenService
 {
     #region Fields
