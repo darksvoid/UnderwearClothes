@@ -8,6 +8,7 @@ using Nop.Plugin.Api.Mobile.Models;
 using Nop.Plugin.Api.Mobile.Models.Customers;
 using Nop.Plugin.Api.Mobile.Models.Orders;
 using Nop.Services.Catalog;
+using Nop.Services.Common;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
 using Nop.Services.Localization;
@@ -56,7 +57,7 @@ public class CustomerAndOrderControllersTests : ServiceTest
             GetService<IProductService>(),
             GetService<IPriceFormatter>());
 
-        _customerController = new CustomerController(_workContext, _customerService, customerModelFactory);
+        _customerController = new CustomerController(_workContext, _customerService, GetService<IAddressService>(), customerModelFactory);
         _ordersController = new OrdersController(_workContext, _orderService, orderModelFactory);
 
         _registeredCustomer = await _customerService.GetCustomerByEmailAsync(NopTestsDefaults.AdminEmail);
@@ -190,6 +191,112 @@ public class CustomerAndOrderControllersTests : ServiceTest
         await AuthenticateAsync(_registeredCustomer);
 
         var result = await _ordersController.Get(int.MaxValue);
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    #endregion
+
+    #region Address management
+
+    private async Task AuthenticateNewCustomerAsync()
+    {
+        var customer = new Customer
+        {
+            CustomerGuid = Guid.NewGuid(),
+            Active = true,
+            CreatedOnUtc = DateTime.UtcNow,
+            LastActivityDateUtc = DateTime.UtcNow
+        };
+        await _customerService.InsertCustomerAsync(customer);
+        await _workContext.SetCurrentCustomerAsync(customer);
+    }
+
+    private static async Task<AddressRequest> BuildValidAddressAsync()
+    {
+        var country = (await GetService<ICountryService>().GetAllCountriesAsync()).First();
+        var states = await GetService<IStateProvinceService>().GetStateProvincesByCountryIdAsync(country.Id);
+
+        return new AddressRequest
+        {
+            FirstName = "Api",
+            LastName = "Tester",
+            Email = "api.address@example.com",
+            Address1 = "Test Street 1",
+            City = "Test City",
+            ZipPostalCode = "10001",
+            PhoneNumber = "1234567890",
+            CountryId = country.Id,
+            StateProvinceId = states.FirstOrDefault()?.Id
+        };
+    }
+
+    [Test]
+    public async Task CreateAddressShouldAddToCustomer()
+    {
+        await AuthenticateNewCustomerAsync();
+
+        var result = await _customerController.CreateAddress(await BuildValidAddressAsync());
+
+        var data = ExtractSuccess<AddressModel>(result);
+        data.Id.Should().BeGreaterThan(0);
+        data.City.Should().Be("Test City");
+    }
+
+    [Test]
+    public async Task CreateInvalidAddressShouldReturnBadRequest()
+    {
+        await AuthenticateNewCustomerAsync();
+
+        var result = await _customerController.CreateAddress(new AddressRequest());
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Test]
+    public async Task UpdateAddressShouldChangeFields()
+    {
+        await AuthenticateNewCustomerAsync();
+        var created = ExtractSuccess<AddressModel>(await _customerController.CreateAddress(await BuildValidAddressAsync()));
+
+        var request = await BuildValidAddressAsync();
+        request.City = "Updated City";
+        var result = await _customerController.UpdateAddress(created.Id, request);
+
+        var data = ExtractSuccess<AddressModel>(result);
+        data.Id.Should().Be(created.Id);
+        data.City.Should().Be("Updated City");
+    }
+
+    [Test]
+    public async Task UpdateUnknownAddressShouldReturnNotFound()
+    {
+        await AuthenticateNewCustomerAsync();
+
+        var result = await _customerController.UpdateAddress(int.MaxValue, await BuildValidAddressAsync());
+
+        result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Test]
+    public async Task DeleteAddressShouldRemoveFromCustomer()
+    {
+        await AuthenticateNewCustomerAsync();
+        var customer = await _workContext.GetCurrentCustomerAsync();
+        var created = ExtractSuccess<AddressModel>(await _customerController.CreateAddress(await BuildValidAddressAsync()));
+
+        await _customerController.DeleteAddress(created.Id);
+
+        var addresses = await _customerService.GetAddressesByCustomerIdAsync(customer.Id);
+        addresses.Any(address => address.Id == created.Id).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task DeleteUnknownAddressShouldReturnNotFound()
+    {
+        await AuthenticateNewCustomerAsync();
+
+        var result = await _customerController.DeleteAddress(int.MaxValue);
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }
