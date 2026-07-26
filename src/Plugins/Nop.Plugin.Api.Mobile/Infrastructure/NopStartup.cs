@@ -105,5 +105,10 @@ public class NopStartup : INopStartup
         });
     }
 
-    public int Order => 700;
+    // Must run before UseRouting (nopCommerce Order 400). Swagger UI serves its embedded static
+    // assets (swagger-ui.css, swagger-ui-bundle.js, ...) through a StaticFileMiddleware that skips
+    // any request for which routing has already selected an endpoint. After UseRouting, nopCommerce's
+    // catch-all route claims those paths, so the assets would 404. Placing Swagger earlier keeps the
+    // endpoint unset when the UI static files are requested.
+    public int Order => 150;
 }
