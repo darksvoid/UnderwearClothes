@@ -19,7 +19,6 @@ public class AuthControllerTests : ServiceTest
 {
     #region Fields
 
-    private IWorkContext _workContext;
     private ICustomerService _customerService;
     private AuthController _authController;
 
@@ -30,7 +29,6 @@ public class AuthControllerTests : ServiceTest
     [OneTimeSetUp]
     public void SetUp()
     {
-        _workContext = GetService<IWorkContext>();
         _customerService = GetService<ICustomerService>();
 
         var settings = new ApiMobileSettings { SecretKey = new string('k', 64) };
@@ -38,7 +36,6 @@ public class AuthControllerTests : ServiceTest
         var blacklistService = new BlacklistService(new MemoryCache(new MemoryCacheOptions()), TimeProvider.System);
 
         var authenticationService = new ApiAuthenticationService(
-            _workContext,
             GetService<IStoreContext>(),
             GetService<ICustomerRegistrationService>(),
             _customerService,
@@ -66,25 +63,15 @@ public class AuthControllerTests : ServiceTest
         return response.Data;
     }
 
-    private async Task AuthenticateGuestAsync()
+    private static RegisterRequest NewRegistration()
     {
-        var customer = new Customer
+        return new RegisterRequest
         {
-            CustomerGuid = Guid.NewGuid(),
-            Active = true,
-            CreatedOnUtc = DateTime.UtcNow,
-            LastActivityDateUtc = DateTime.UtcNow
+            Email = $"api.reg.{Guid.NewGuid():N}@example.com",
+            Password = "P@ssw0rd1",
+            FirstName = "Api",
+            LastName = "User"
         };
-        await _customerService.InsertCustomerAsync(customer);
-
-        var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
-        await _customerService.AddCustomerRoleMappingAsync(new CustomerCustomerRoleMapping
-        {
-            CustomerId = customer.Id,
-            CustomerRoleId = guestRole.Id
-        });
-
-        await _workContext.SetCurrentCustomerAsync(customer);
     }
 
     #endregion
@@ -94,31 +81,33 @@ public class AuthControllerTests : ServiceTest
     [Test]
     public async Task RegisterShouldCreateCustomerAndReturnToken()
     {
-        await AuthenticateGuestAsync();
-        var email = $"api.reg.{Guid.NewGuid():N}@example.com";
+        var request = NewRegistration();
 
-        var result = await _authController.Register(new RegisterRequest
-        {
-            Email = email,
-            Password = "P@ssw0rd1",
-            FirstName = "Api",
-            LastName = "User"
-        });
+        var result = await _authController.Register(request);
 
         var data = ExtractSuccess<RegisterResponse>(result);
         data.Registered.Should().BeTrue();
         data.AccessToken.Should().NotBeNullOrEmpty();
 
-        var created = await _customerService.GetCustomerByEmailAsync(email);
+        var created = await _customerService.GetCustomerByEmailAsync(request.Email);
         created.Should().NotBeNull();
         created.FirstName.Should().Be("Api");
     }
 
     [Test]
+    public async Task RegisterTwiceShouldSucceedIndependently()
+    {
+        var first = ExtractSuccess<RegisterResponse>(await _authController.Register(NewRegistration()));
+        var second = ExtractSuccess<RegisterResponse>(await _authController.Register(NewRegistration()));
+
+        first.AccessToken.Should().NotBeNullOrEmpty();
+        second.AccessToken.Should().NotBeNullOrEmpty();
+        second.AccessToken.Should().NotBe(first.AccessToken);
+    }
+
+    [Test]
     public async Task RegisterWithExistingEmailShouldReturnBadRequest()
     {
-        await AuthenticateGuestAsync();
-
         var result = await _authController.Register(new RegisterRequest
         {
             Email = NopTestsDefaults.AdminEmail,

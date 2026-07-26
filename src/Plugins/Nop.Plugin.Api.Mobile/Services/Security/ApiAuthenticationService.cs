@@ -10,7 +10,6 @@ public class ApiAuthenticationService : IApiAuthenticationService
 {
     #region Fields
 
-    protected readonly IWorkContext _workContext;
     protected readonly IStoreContext _storeContext;
     protected readonly ICustomerRegistrationService _customerRegistrationService;
     protected readonly ICustomerService _customerService;
@@ -22,15 +21,13 @@ public class ApiAuthenticationService : IApiAuthenticationService
 
     #region Ctor
 
-    public ApiAuthenticationService(IWorkContext workContext,
-        IStoreContext storeContext,
+    public ApiAuthenticationService(IStoreContext storeContext,
         ICustomerRegistrationService customerRegistrationService,
         ICustomerService customerService,
         ITokenService tokenService,
         IBlacklistService blacklistService,
         CustomerSettings customerSettings)
     {
-        _workContext = workContext;
         _storeContext = storeContext;
         _customerRegistrationService = customerRegistrationService;
         _customerService = customerService;
@@ -69,7 +66,9 @@ public class ApiAuthenticationService : IApiAuthenticationService
         if (_customerSettings.UserRegistrationType == UserRegistrationType.Disabled)
             return new RegisterResult { RegistrationDisabled = true };
 
-        var customer = await _workContext.GetCurrentCustomerAsync();
+        //always register a fresh guest — the API is stateless and must not depend on the ambient
+        //(cookie-based) work context customer, which may already be registered
+        var customer = await _customerService.InsertGuestCustomerAsync();
         var store = await _storeContext.GetCurrentStoreAsync();
 
         var username = _customerSettings.UsernamesEnabled ? request.Username : request.Email;
