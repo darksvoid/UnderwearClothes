@@ -54,6 +54,44 @@ public class AuthController : BaseApiController
     }
 
     /// <summary>
+    /// Registers a new customer. Returns an access token when the store allows immediate login
+    /// (standard registration), otherwise indicates that email confirmation or admin approval is required.
+    /// </summary>
+    /// <response code="200">Registration succeeded.</response>
+    /// <response code="400">Registration failed or is disabled.</response>
+    [HttpPost("register")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<RegisterResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiError), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        var result = await _authenticationService.RegisterAsync(request);
+
+        if (result.RegistrationDisabled)
+            return BadRequest(ApiResponse.Fail("registration_disabled", "Registration is disabled."));
+
+        if (!result.Succeeded)
+        {
+            var details = new Dictionary<string, string[]> { ["errors"] = result.Errors.ToArray() };
+            return BadRequest(ApiResponse.Fail("registration_failed", string.Join("; ", result.Errors), details));
+        }
+
+        if (!string.IsNullOrEmpty(result.AccessToken))
+            return Success(new RegisterResponse
+            {
+                AccessToken = result.AccessToken,
+                TokenType = "Bearer",
+                ExpiresIn = result.ExpiresInSeconds
+            });
+
+        return Success(new RegisterResponse
+        {
+            RequiresEmailValidation = result.RequiresEmailValidation,
+            RequiresApproval = result.RequiresApproval
+        });
+    }
+
+    /// <summary>
     /// Revokes the current access token. The token cannot be used afterwards.
     /// </summary>
     /// <response code="200">The token has been revoked.</response>

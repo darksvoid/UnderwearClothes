@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using Nop.Core;
 using Nop.Core.Domain.Customers;
+using Nop.Plugin.Api.Mobile.Models.Auth;
 using Nop.Services.Customers;
 
 namespace Nop.Plugin.Api.Mobile.Services.Security;
@@ -8,6 +10,8 @@ public class ApiAuthenticationService : IApiAuthenticationService
 {
     #region Fields
 
+    protected readonly IWorkContext _workContext;
+    protected readonly IStoreContext _storeContext;
     protected readonly ICustomerRegistrationService _customerRegistrationService;
     protected readonly ICustomerService _customerService;
     protected readonly ITokenService _tokenService;
@@ -18,12 +22,16 @@ public class ApiAuthenticationService : IApiAuthenticationService
 
     #region Ctor
 
-    public ApiAuthenticationService(ICustomerRegistrationService customerRegistrationService,
+    public ApiAuthenticationService(IWorkContext workContext,
+        IStoreContext storeContext,
+        ICustomerRegistrationService customerRegistrationService,
         ICustomerService customerService,
         ITokenService tokenService,
         IBlacklistService blacklistService,
         CustomerSettings customerSettings)
     {
+        _workContext = workContext;
+        _storeContext = storeContext;
         _customerRegistrationService = customerRegistrationService;
         _customerService = customerService;
         _tokenService = tokenService;
@@ -53,6 +61,52 @@ public class ApiAuthenticationService : IApiAuthenticationService
             Status = CustomerLoginResults.Successful,
             AccessToken = _tokenService.GenerateAccessToken(customer),
             ExpiresInSeconds = _tokenService.AccessTokenExpirationSeconds
+        };
+    }
+
+    public async Task<RegisterResult> RegisterAsync(RegisterRequest request)
+    {
+        if (_customerSettings.UserRegistrationType == UserRegistrationType.Disabled)
+            return new RegisterResult { RegistrationDisabled = true };
+
+        var customer = await _workContext.GetCurrentCustomerAsync();
+        var store = await _storeContext.GetCurrentStoreAsync();
+
+        var username = _customerSettings.UsernamesEnabled ? request.Username : request.Email;
+        var isApproved = _customerSettings.UserRegistrationType == UserRegistrationType.Standard;
+
+        var registrationRequest = new CustomerRegistrationRequest(
+            customer,
+            request.Email,
+            username,
+            request.Password,
+            _customerSettings.DefaultPasswordFormat,
+            store.Id,
+            isApproved);
+
+        var result = await _customerRegistrationService.RegisterCustomerAsync(registrationRequest);
+        if (!result.Success)
+            return new RegisterResult { Errors = result.Errors };
+
+        if (!string.IsNullOrWhiteSpace(request.FirstName))
+            customer.FirstName = request.FirstName;
+        if (!string.IsNullOrWhiteSpace(request.LastName))
+            customer.LastName = request.LastName;
+        await _customerService.UpdateCustomerAsync(customer);
+
+        if (_customerSettings.UserRegistrationType == UserRegistrationType.Standard)
+            return new RegisterResult
+            {
+                Succeeded = true,
+                AccessToken = _tokenService.GenerateAccessToken(customer),
+                ExpiresInSeconds = _tokenService.AccessTokenExpirationSeconds
+            };
+
+        return new RegisterResult
+        {
+            Succeeded = true,
+            RequiresEmailValidation = _customerSettings.UserRegistrationType == UserRegistrationType.EmailValidation,
+            RequiresApproval = _customerSettings.UserRegistrationType == UserRegistrationType.AdminApproval
         };
     }
 
