@@ -128,6 +128,25 @@ dotnet test src/NopCommerce.sln --filter "FullyQualifiedName~Nop.Plugin.Api.Mobi
 
 ---
 
+## Своя тема оформления
+
+Тема — это отдельная папка в `src/Presentation/Nop.Web/Themes/`, которая переопределяет
+стили и представления дефолтной темы; править код платформы не нужно.
+
+Кратко:
+
+1. Скопировать `Themes/DefaultClean` в `Themes/<ВашаТема>`.
+2. В `theme.json` задать `SystemName` (совпадает с именем папки) и `FriendlyName`.
+3. Положить стили в `Content/css/styles.css`, изображения — в `Content/images/`;
+   при необходимости переопределить представления в `Views/` (с тем же относительным путём,
+   что и в `Nop.Web/Views/`).
+4. Активировать в админке: **Configuration → Settings → General settings → Default store theme**.
+
+Подробное руководство — в официальной документации:
+https://docs.nopcommerce.com/en/developer/design/new-theme.html
+
+---
+
 ## О платформе nopCommerce
 
 [nopCommerce](https://www.nopcommerce.com/) — бесплатная платформа электронной коммерции с
