@@ -1,80 +1,141 @@
-﻿﻿nopCommerce: free and open-source eCommerce solution
-===========
+# nopCommerce + Mobile REST API (проект Bell You)
 
-[nopCommerce](https://www.nopcommerce.com/?utm_source=github&utm_medium=content&utm_campaign=homepage) is the best open-source eCommerce platform. nopCommerce is free, and it is the most popular ASP.NET Core shopping cart.
+Форк платформы электронной коммерции **nopCommerce** (ASP.NET Core, .NET 9) с собственным
+приватным REST API для мобильного клиентского приложения — плагин **`Nop.Plugin.Api.Mobile`**
+(эндпоинты `/api/v1/...`, аутентификация JWT, документация OpenAPI/Swagger).
 
-![nopCommerce demo](https://www.nopcommerce.com/images/github/responsive_devices_codeplex.png#v1)
+---
 
-### Key features ###
+## Требования
 
-* The product is being developed and supported by the professional team since 2008.
-* nopCommerce has been downloaded more than 3,000,000 times.
-* The active developer community has more than 250,000 members.
-* nopCommerce runs on .NET 9 with an MS SQL 2012 (or higher) backend database.
-* nopCommerce is cross-platform, and you can run it on Windows, Linux, or Mac.
-* nopCommerce supports Docker out of the box, so you can easily run nopCommerce on a Linux machine.
-* nopCommerce supports PostgreSQL and MySQL databases.
-* nopCommerce fully supports web farms. You can read more about it [here](https://docs.nopcommerce.com/en/developer/tutorials/web-farms.html?utm_source=github&utm_medium=referral&utm_campaign=documentation&utm_content=text).  
-* All methods in nopCommerce are async.
-* nopCommerce supports multi-factor authentication out of the box.
-* Start our [online course for developers](https://nopcommerce.com/training?utm_source=github&utm_medium=referral&utm_campaign=course&utm_content=text) and get the practical and technical skills you need to run and customize nopCommerce websites.
+- **Docker Desktop** (рекомендуемый способ запуска), либо
+- **.NET 9 SDK** — для запуска без Docker.
 
-![Logo](https://www.nopcommerce.com/images/github/logos.png#v2)
+---
 
-nopCommerce architecture follows well-known software patterns and the best security practices. The source code is fully customizable. Pluggable and clear architecture makes it easy to develop custom functionality and follow any business requirements.
+## Быстрый запуск (Docker + PostgreSQL)
 
-Using the latest Microsoft technologies, nopCommerce provides high performance, stability, and security. nopCommerce is also fully compatible with Azure and web farms.
+Из корня репозитория:
 
-Our clear and detailed [documentation](https://docs.nopcommerce.com/developer/index.html?utm_source=github&utm_medium=referral&utm_campaign=documentation&utm_content=text) and [online course](https://nopcommerce.com/training?utm_source=github&utm_medium=referral&utm_campaign=course&utm_content=text) for developers will help you start with nopCommerce easily.
+```bash
+docker compose -f postgresql-docker-compose.yml up --build
+```
 
+Поднимаются два контейнера:
 
-### The advantages of working with nopCommerce ###
+- `nopcommerce` — веб-приложение (порт хоста **80** → порт контейнера 8080);
+- `nopcommerce_postgres_server` — база данных PostgreSQL.
 
-nopCommerce offers powerful [out-of-the-box features](https://www.nopcommerce.com/features?utm_source=github&utm_medium=referral&utm_campaign=features&utm_content=text) for creating an online store of any size and type.
+После старта приложение доступно на **http://localhost/**. При первом запуске произойдёт
+переадресация на мастер установки `/install`.
 
-nopCommerce is integrated with all the popular third-party services. You can find thousands of integrations on nopCommerce [Marketplace](https://www.nopcommerce.com/marketplace?utm_source=github&utm_medium=referral&utm_campaign=marketplace&utm_content=text).
+> Есть также `docker-compose.yml` для варианта с MS SQL Server.
 
-The [Web API plugin](https://www.nopcommerce.com/web-api?utm_source=github&utm_medium=referral&utm_campaign=WebAPI&utm_content=text) by the nopCommerce team lets you build integrations with third-party services or mobile applications using REST. The Web API plugin is available with source code and covers all methods of nopCommerce: backend and frontend. You can read more about it [here](https://www.nopcommerce.com/web-api?utm_source=github&utm_medium=referral&utm_campaign=WebAPI&utm_content=text).
+---
 
-Friendly members of the [nopCommerce community](https://www.nopcommerce.com/boards?utm_source=github&utm_medium=referral&utm_campaign=forum&utm_content=text) will always help with advice and share their experiences. nopCommerce core development team provides [professional support](https://www.nopcommerce.com/nopcommerce-premium-support-services?utm_source=github&utm_medium=referral&utm_campaign=premium_support&utm_content=text) within 24 hours.
+## Установка магазина (мастер `/install`)
 
+Откройте http://localhost/ — откроется мастер установки. Параметры для варианта с PostgreSQL:
 
-## Store demo ##
+| Поле | Значение |
+|---|---|
+| Тип базы данных | PostgreSQL |
+| Server / Host | `nopcommerce_database` |
+| Database | `nopCommerce` (с галочкой «создать базу, если не существует») |
+| User | `postgres` |
+| Password | `nopCommerce_db_password` |
+| Email администратора | `admin@admin.com` (предзаполнено, можно изменить) |
+| Пароль администратора | задаётся при установке (в dev использовался `admin`) |
 
-Evaluate the functionality and convenience of nopCommerce as a customer and store owner.
+После установки магазин перенаправит на витрину.
 
-Front End | Admin area
-----|------
-[![ScreenShot](https://www.nopcommerce.com/images/github/public-demo.png#v1)](https://demo.nopcommerce.com?utm_source=github&utm_medium=referral&utm_campaign=demo_store&utm_content=button) | [![ScreenShot](https://www.nopcommerce.com/images/github/admin-demo.png#v1)](https://admin-demo.nopcommerce.com/admin?utm_source=github&utm_medium=referral&utm_campaign=demo_store&utm_content=button)
+---
 
+## Основные ресурсы платформы
 
-### nopCommerce resources ###
+| Ресурс | URL | Доступ |
+|---|---|---|
+| Витрина (главная) | http://localhost/ | публично |
+| Админка | http://localhost/admin | под учётной записью администратора |
+| Страница входа | http://localhost/login | email + пароль администратора |
+| Swagger UI (документация API) | http://localhost/swagger | публично |
+| REST API (базовый префикс) | http://localhost/api/v1 | публично / по токену |
 
-nopCommerce official site: [https://www.nopcommerce.com](https://www.nopcommerce.com/?utm_source=github&utm_medium=referral&utm_campaign=homepage&utm_content=links)
+### Как войти в админку
 
-* [Demo store](https://www.nopcommerce.com/demo?utm_source=github&utm_medium=referral&utm_campaign=demo_store&utm_content=links)
-* [Download nopCommerce](https://www.nopcommerce.com/download-nopcommerce?utm_source=github&utm_medium=referral&utm_campaign=download_nop&utm_content=links)
-* [Online course for developers](https://nopcommerce.com/training?utm_source=github&utm_medium=referral&utm_campaign=course&utm_content=links)
-* [Feature list](https://www.nopcommerce.com/features?utm_source=github&utm_medium=referral&utm_campaign=features&utm_content=links)
-* [Web API plugin](https://www.nopcommerce.com/web-api?utm_source=github&utm_medium=referral&utm_campaign=WebAPI&utm_content=links)
-* [nopCommerce documentation](https://docs.nopcommerce.com?utm_source=github&utm_medium=referral&utm_campaign=documentation&utm_content=links)
-* [Community forums](https://www.nopcommerce.com/boards?utm_source=github&utm_medium=referral&utm_campaign=forum&utm_content=links)
-* [Premium support services](https://www.nopcommerce.com/nopcommerce-premium-support-services?utm_source=github&utm_medium=referral&utm_campaign=premium_support&utm_content=links)
-* [Certified developer program](https://www.nopcommerce.com/certified-developer-program?utm_source=github&utm_medium=referral&utm_campaign=certified_developer&utm_content=links)
-* [nopCommerce partners](https://www.nopcommerce.com/partners?utm_source=github&utm_medium=referral&utm_campaign=solution_partners&utm_content=links)
+Перейдите на **http://localhost/admin** — произойдёт переадресация на **/login**. Введите
+**email и пароль администратора**, заданные при установке (по умолчанию email `admin@admin.com`).
+После входа откроется панель управления.
 
-nopCommerce YouTube: [The Architecture behind the nopCommerce eCommerce Platform](https://www.youtube.com/watch?v=6gLbizzSA9o&list=PLnL_aDfmRHwtJmzeA7SxrpH3-XDY2ue0a)
+---
 
+## Мобильный REST API (плагин `Nop.Plugin.Api.Mobile`)
 
-### Earn with nopCommerce ###
+1. Войдите в админку → **Configuration → Local plugins**.
+2. Найдите плагин **«Mobile REST API»** (system name `Api.Mobile`) и нажмите **Install**
+   (при установке генерируется секретный ключ для подписи JWT).
+3. Документация и «песочница» — **http://localhost/swagger**.
 
-60,000 stores worldwide are powered by nopCommerce, and 10,000 new stores open every year. nopCommerce [solution partners’ directory](https://www.nopcommerce.com/partners?utm_source=github&utm_medium=referral&utm_campaign=solution_partners&utm_content=text_become_partner) gets 80,000+ page views per year from store owners who are looking for a partner to build a store from scratch, migrate from another platform, or improve and customize an existing store.
+Аутентификация:
 
-Become a solution partner of nopCommerce and get new clients – [learn more](https://www.nopcommerce.com/become-partner?utm_source=github&utm_medium=referral&utm_campaign=become-partner&utm_content=learn_more).
+- `POST /api/v1/auth/register` — регистрация покупателя;
+- `POST /api/v1/auth/token` — вход, выдача JWT;
+- полученный токен передаётся в заголовке `Authorization: Bearer <token>`;
+- `POST /api/v1/auth/logout` — отзыв токена.
 
-Create a new graphical theme or develop a new plugin or integration and sell it on the nopCommerce [Marketplace](https://www.nopcommerce.com/marketplace?utm_source=github&utm_medium=referral&utm_campaign=marketplace&utm_content=text_sell_on_marketplace).
+---
 
+## Учётные данные (dev-значения)
 
-### Contribute ###
+> ⚠️ **Внимание.** Значения ниже — для локальной разработки. **Перед выводом в продакшен
+> ОБЯЗАТЕЛЬНО смените все пароли и секреты**, ограничьте доступ к админке и Swagger, не храните
+> секреты в репозитории.
 
-As a free and open-source project, we are very grateful to everyone who helps us to develop nopCommerce. Please find more details about the options and bonuses for contributors at [contribute page](https://www.nopcommerce.com/contribute?utm_source=github&utm_medium=referral&utm_campaign=contribute&utm_content=text).
+| Назначение | Логин | Пароль / значение | Где задаётся |
+|---|---|---|---|
+| PostgreSQL | `postgres` | `nopCommerce_db_password` | `postgresql-docker-compose.yml` |
+| MS SQL Server (вариант) | `sa` | `nopCommerce_db_password` | `docker-compose.yml` |
+| Администратор магазина | `admin@admin.com` | `admin` (dev; задаётся при установке) | мастер `/install` |
+| Секрет подписи JWT | — | генерируется автоматически при установке плагина | настройки магазина (БД) |
+
+**Рекомендации для продакшена:**
+
+- сменить пароли БД (`postgres` / `sa`) и не использовать значения по умолчанию;
+- сменить email/пароль администратора на надёжные;
+- перегенерировать секрет JWT (переустановка плагина создаёт новый) и хранить его безопасно;
+- не публиковать Swagger и админку в открытом доступе без ограничений;
+- не коммитить `src/Presentation/Nop.Web/App_Data/appsettings.json` (содержит строку подключения);
+  файл уже в `.gitignore`.
+
+---
+
+## Запуск без Docker (опционально)
+
+1. Установите **.NET 9 SDK**.
+2. Откройте `src/NopCommerce.sln` в Visual Studio (или выполните
+   `dotnet run --project src/Presentation/Nop.Web`).
+3. Пройдите мастер `/install`, указав доступную БД (PostgreSQL / MS SQL Server).
+
+---
+
+## Тесты
+
+Интеграционные тесты плагина (NUnit, SQLite, sample-данные):
+
+```bash
+dotnet test src/NopCommerce.sln --filter "FullyQualifiedName~Nop.Plugin.Api.Mobile.Tests"
+```
+
+---
+
+## О платформе nopCommerce
+
+[nopCommerce](https://www.nopcommerce.com/) — бесплатная платформа электронной коммерции с
+открытым исходным кодом на ASP.NET Core (.NET 9), поддерживает MS SQL Server, PostgreSQL и MySQL,
+кросс-платформенна и работает в Docker.
+
+Полезные ссылки:
+
+- Документация: https://docs.nopcommerce.com
+- Демо-магазин: https://demo.nopcommerce.com
+- Исходный код: https://github.com/nopSolutions/nopCommerce
